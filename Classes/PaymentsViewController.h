@@ -11,16 +11,15 @@
 @class ASAccount;
 
 @interface PaymentsViewController : UIViewController <UIScrollViewDelegate, UIActionSheetDelegate> {
-	
 	ASAccount *account;
 	UIScrollView *scrollView;
 	UIPageControl *pageControl;
 }
 
-- (id)initWithAccount:(ASAccount *)paymentAccount;
+- (instancetype)initWithAccount:(ASAccount *)paymentAccount;
 - (void)reloadData;
 
-@property (nonatomic, retain) UIScrollView *scrollView;
-@property (nonatomic, retain) UIPageControl *pageControl;
+@property (nonatomic, strong) UIScrollView *scrollView;
+@property (nonatomic, strong) UIPageControl *pageControl;
 
 @end

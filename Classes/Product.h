@@ -16,33 +16,31 @@
 #define kProductPlatformInApp		@"In-App"
 #define kProductPlatformAppBundle   @"App Bundle"
 
-@class ASAccount;
+@class ASAccount, Version, Review;
 
 @interface Product : NSManagedObject {
-
-    BOOL isDownloadingPromoCodes;
+	BOOL isDownloadingPromoCodes;
 }
 
 @property (nonatomic, assign) BOOL isDownloadingPromoCodes;
 
-@property (nonatomic, retain) NSString *name;
-@property (nonatomic, retain) NSString *platform;
-@property (nonatomic, retain) NSString *productID;
-@property (nonatomic, retain) NSDictionary *reviewSummary;
-@property (nonatomic, retain) UIColor *color;
-@property (nonatomic, retain) ASAccount *account;
-@property (nonatomic, retain) NSSet *reviews;
-@property (nonatomic, retain) NSSet *transactions;
-@property (nonatomic, retain) NSNumber *hidden;
-@property (nonatomic, retain) NSString *customName;
-@property (nonatomic, retain) NSString *SKU;
-@property (nonatomic, retain) NSString *parentSKU;
-@property (nonatomic, retain) NSString *currentVersion;
-@property (nonatomic, retain) NSDate *lastModified;
-@property (nonatomic, retain) NSSet *promoCodes;
+@property (nonatomic, strong) NSString *name;
+@property (nonatomic, strong) NSString *platform;
+@property (nonatomic, strong) NSString *productID;
+@property (nonatomic, strong) NSDictionary *reviewSummary;
+@property (nonatomic, strong) UIColor *color;
+@property (nonatomic, strong) ASAccount *account;
+@property (nonatomic, strong) NSSet<Version *> *versions;
+@property (nonatomic, strong) NSSet<Review *> *reviews;
+@property (nonatomic, strong) NSSet *transactions;
+@property (nonatomic, strong) NSNumber *hidden;
+@property (nonatomic, strong) NSString *customName;
+@property (nonatomic, strong) NSString *SKU;
+@property (nonatomic, strong) NSString *parentSKU;
+@property (nonatomic, strong) NSDate *lastModified;
+@property (nonatomic, strong) NSSet *promoCodes;
 
 - (NSString *)displayName;
 - (NSString *)defaultDisplayName;
 
 @end
-

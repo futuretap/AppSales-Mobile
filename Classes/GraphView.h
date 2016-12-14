@@ -34,16 +34,15 @@
 
 
 @interface GraphView : UIView <UIScrollViewDelegate> {
-
-	id<GraphViewDataSource> dataSource;
-	id<GraphViewDelegate> delegate;
+	id<GraphViewDataSource> __weak dataSource;
+	id<GraphViewDelegate> __weak delegate;
 	
 	NSMutableDictionary *cachedValues;
 	int barsPerPage;
 	CGFloat barWidth;
 	
 	NSRange visibleRange;
-	float max;
+	CGFloat max;
 	BOOL maxLocked;
 	UIImageView *lockIndicatorView;
 	UILabel *titleLabel;
@@ -55,35 +54,34 @@
 	UIButton *sectionLabelButton;
 }
 
-@property (nonatomic, assign) id<GraphViewDelegate> delegate;
-@property (nonatomic, assign) id<GraphViewDataSource> dataSource;
+@property (nonatomic, weak) id<GraphViewDelegate> delegate;
+@property (nonatomic, weak) id<GraphViewDataSource> dataSource;
 
-@property (nonatomic, retain) UIButton *sectionLabelButton;
-@property (nonatomic, retain) NSString *unit;
-@property (nonatomic, retain) NSString *title;
+@property (nonatomic, strong) UIButton *sectionLabelButton;
+@property (nonatomic, strong) NSString *unit;
+@property (nonatomic, strong) NSString *title;
 
 - (NSRange)visibleBarRange;
-- (CGRect)frameForBarAtIndex:(int)index;
+- (CGRect)frameForBarAtIndex:(NSInteger)index;
 - (NSString *)labelTextForIndex:(NSUInteger)index;
 - (NSArray *)stackedValuesForBarAtIndex:(NSUInteger)index;
 - (void)setNumberOfBarsPerPage:(int)newBarsPerPage;
 - (void)reloadColors;
 - (void)reloadData;
 - (void)reloadValuesAnimated:(BOOL)animated;
-- (float)maxVisibleValue;
+- (CGFloat)maxVisibleValue;
 
 
 @end
 
 
 @interface StackedBarView : UIControl {
-    
 	NSMutableArray *segmentViews;
 	UILabel *label;
 	UIView *selectedBackgroundView;
 }
 
-- (id)initWithColors:(NSArray *)colorArray;
+- (instancetype)initWithColors:(NSArray *)colorArray;
 - (void)setSegmentValues:(NSArray *)values;
 - (void)setSegmentValues:(NSArray *)values label:(NSString *)labelText;
 - (UIView *)selectedBackgroundView;
@@ -95,22 +93,21 @@
 #define kScaleViewLineLabelTag	1
 
 @interface ScaleView : UIView {
-	
 	NSString *unit;
-	float max;
+	NSNumberFormatter *numberFormatter;
+	CGFloat max;
 	NSArray *possibleUnits;
 	NSMutableDictionary *lineViews;
 }
 
-@property (nonatomic, retain) NSString *unit;
+@property (nonatomic, strong) NSString *unit;
 
-- (void)setMax:(float)newMax animated:(BOOL)animated;
+- (void)setMax:(CGFloat)newMax animated:(BOOL)animated;
 
 @end
 
 
 @interface LineView : UIView {
-	
 	UILabel *label;
 }
 

@@ -11,32 +11,11 @@
 
 @implementation ColorButton
 
-@synthesize color, displayAsEllipse, showOutline;
+@synthesize showCheckmark;
 
-- (void)drawRect:(CGRect)rect
-{
-	if (!color) return;
-	if (self.highlighted) {
-		[[color colorByMultiplyingBy:0.5] set];
-	} else {
-		[color setFill];
-	}
-	UIRectFill(self.bounds);
-}
-
-- (void)setColor:(UIColor *)newColor
-{
-	if (newColor == color) return;
-	[newColor retain];
-	[color release];
-	color = newColor;
-	[self setNeedsDisplay];
-}
-
-- (void)setHighlighted:(BOOL)flag
-{
-	[super setHighlighted:flag];
-	[self setNeedsDisplay];
+- (void)setShowCheckmark:(BOOL)_showCheckmark {
+	showCheckmark = _showCheckmark;
+	[self setImage:(showCheckmark ? [UIImage imageNamed:@"Checkmark"] : nil) forState:UIControlStateNormal];
 }
 
 @end

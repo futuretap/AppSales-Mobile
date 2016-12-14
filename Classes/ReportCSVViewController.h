@@ -17,9 +17,9 @@
 	UIWebView *webView;
 }
 
-@property (nonatomic, retain) UIWebView *webView;
+@property (nonatomic, strong) UIWebView *webView;
 
-- (id)initWithReport:(Report *)selectedReport;
+- (instancetype)initWithReport:(Report *)selectedReport;
 
 @end
 
@@ -30,6 +30,6 @@
 	NSDateFormatter *dateFormatter;
 }
 
-- (id)initWithReports:(NSArray *)allReports;
+- (instancetype)initWithReports:(NSArray *)allReports;
 
 @end

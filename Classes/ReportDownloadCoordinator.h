@@ -11,18 +11,17 @@
 @class ASAccount, Product;
 
 @interface ReportDownloadCoordinator : NSObject {
-	
 	NSOperationQueue *reportDownloadQueue;
 	BOOL isBusy;
 }
 
-@property (nonatomic, assign) BOOL isBusy;
-
-+ (id)sharedReportDownloadCoordinator;
++ (instancetype)sharedReportDownloadCoordinator;
 - (void)downloadReportsForAccount:(ASAccount *)account;
 - (void)cancelDownloadForAccount:(ASAccount *)account;
 - (void)cancelAllDownloads;
 - (void)importReportsIntoAccount:(ASAccount *)account;
 - (void)importReportsIntoAccount:(ASAccount *)account fromDirectory:(NSString *)path deleteAfterImport:(BOOL)deleteFlag;
+- (void)downloadPromoCodesForProduct:(Product *)product numberOfCodes:(NSInteger)numberOfCodes;
+- (BOOL)isBusy;
 
 @end

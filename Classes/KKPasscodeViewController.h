@@ -17,70 +17,57 @@
 
 #import <UIKit/UIKit.h>
 
-
-enum {
+typedef NS_ENUM(NSInteger, KKPasscodeMode) {
 	KKPasscodeModeEnter = 0,
 	KKPasscodeModeSet = 1,
 	KKPasscodeModeDisabled = 2,
 	KKPasscodeModeChange = 3
 };
-typedef NSUInteger KKPasscodeMode;
-
 
 @class KKPasscodeViewController;
 
 @protocol KKPasscodeViewControllerDelegate <NSObject>
 
 @optional
-
-- (void)didPasscodeEnteredCorrectly:(KKPasscodeViewController*)viewController;
-- (void)didPasscodeEnteredIncorrectly:(KKPasscodeViewController*)viewController;
-- (void)shouldEraseApplicationData:(KKPasscodeViewController*)viewController;
-- (void)didSettingsChanged:(KKPasscodeViewController*)viewController;
+- (void)didPasscodeEnteredCorrectly:(KKPasscodeViewController *)viewController;
+- (void)didPasscodeEnteredIncorrectly:(KKPasscodeViewController *)viewController;
+- (void)shouldEraseApplicationData:(KKPasscodeViewController *)viewController;
+- (void)didSettingsChanged:(KKPasscodeViewController *)viewController;
 
 @end
-
-
 
 @interface KKPasscodeViewController : UIViewController <UITextFieldDelegate, UITableViewDelegate, UITableViewDataSource> {
+	UILabel *passcodeConfirmationWarningLabel;
+	UIView *failedAttemptsView;
+	UILabel *failedAttemptsLabel;
+	NSInteger failedAttemptsCount;
 	
-	id<KKPasscodeViewControllerDelegate> _delegate;
+	NSUInteger tableIndex;
+	NSMutableArray *tableViews;
+	NSMutableArray *textFields;
+	NSMutableArray *squares;
 	
-	UILabel* _passcodeConfirmationWarningLabel;
-	UIView* _failedAttemptsView;
-	UILabel* _failedAttemptsLabel;
-	NSInteger _failedAttemptsCount;
+	UITableView *enterPasscodeTableView;
+	UITextField *enterPasscodeTextField;
+	NSArray *enterPasscodeSquareImageViews;
 	
-	NSUInteger _tableIndex;
-	NSMutableArray* _tableViews;
-	NSMutableArray* _textFields;
-	NSMutableArray* _squares;
+	UITableView *setPasscodeTableView;
+	UITextField *setPasscodeTextField;
+	NSArray *setPasscodeSquareImageViews;
 	
-	UITableView* _enterPasscodeTableView;
-	UITextField* _enterPasscodeTextField;
-	NSArray* _enterPasscodeSquareImageViews;
+	UITableView *confirmPasscodeTableView;
+	UITextField *confirmPasscodeTextField;
+	NSArray *confirmPasscodeSquareImageViews;
 	
-	UITableView* _setPasscodeTableView;
-	UITextField* _setPasscodeTextField;
-	NSArray* _setPasscodeSquareImageViews;
-	
-	UITableView* _confirmPasscodeTableView;
-	UITextField* _confirmPasscodeTextField;
-	NSArray* _confirmPasscodeSquareImageViews;
-	
-	KKPasscodeMode _mode;
-	
-	BOOL _passcodeLockOn;
-	BOOL _eraseData;
+	BOOL passcodeLockOn;
+	BOOL eraseData;
 }
 
-@property (nonatomic, assign) id <KKPasscodeViewControllerDelegate> delegate; 
+@property (nonatomic, weak) id <KKPasscodeViewControllerDelegate> delegate; 
 @property (nonatomic, assign) KKPasscodeMode mode;
+@property (nonatomic, assign) BOOL startTouchID;
 
-@property (nonatomic, retain) UITableView *enterPasscodeTableView;
-@property (nonatomic, retain) UITableView *setPasscodeTableView;
-@property (nonatomic, retain) UITableView *confirmPasscodeTableView;
-
++ (BOOL)hasTouchID;
+- (void)authenticateWithTouchID;
 
 @end
-

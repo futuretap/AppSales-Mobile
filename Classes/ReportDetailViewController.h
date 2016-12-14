@@ -11,13 +11,12 @@
 @class Report, Product, MapView, AppIconView;
 @protocol ReportSummary;
 
-typedef enum ReportDetailViewMode { 
+typedef NS_ENUM(NSInteger, ReportDetailViewMode) {
 	ReportDetailViewModeCountries = 0,
 	ReportDetailViewModeProducts
-} ReportDetailViewMode;
+};
 
 @interface ReportDetailViewController : UIViewController <UITableViewDataSource, UITableViewDelegate> {
-
 	NSArray *reports;
 	id<ReportSummary> selectedReport;
 	NSUInteger selectedReportIndex;
@@ -25,6 +24,7 @@ typedef enum ReportDetailViewMode {
 	ReportDetailViewMode viewMode;
 	NSArray *countryEntries;
 	NSArray *productEntries;
+	NSNumberFormatter *numberFormatter;
 	
 	NSString *selectedCountry;
 	Product *selectedProduct;
@@ -37,32 +37,27 @@ typedef enum ReportDetailViewMode {
 	UIBarButtonItem *prevItem;
 	UIBarButtonItem *nextItem;
 	
-	UIImageView *headerView;
+	UIVisualEffectView *headerView;
 	UILabel *headerLabel;
 	AppIconView *headerIconView;
 	UIToolbar *toolbar;
-	
-	NSNumberFormatter *revenueFormatter;
 }
 
-@property (nonatomic, retain) NSArray *countryEntries;
-@property (nonatomic, retain) NSArray *productEntries;
-@property (nonatomic, retain) id<ReportSummary> selectedReport;
+@property (nonatomic, strong) NSArray *countryEntries;
+@property (nonatomic, strong) NSArray *productEntries;
+@property (nonatomic, strong) id<ReportSummary> selectedReport;
 @property (nonatomic, assign) NSUInteger selectedReportIndex;
-@property (nonatomic, retain) MapView *mapView;
-@property (nonatomic, retain) UIImageView *mapShadowView;
-@property (nonatomic, retain) UIImageView *shadowView;
-@property (nonatomic, retain) UITableView *tableView;
-@property (nonatomic, retain) UIBarButtonItem *prevItem;
-@property (nonatomic, retain) UIBarButtonItem *nextItem;
-@property (nonatomic, retain) UIImageView *headerView;
-@property (nonatomic, retain) UILabel *headerLabel;
-@property (nonatomic, retain) AppIconView *headerIconView;
-@property (nonatomic, retain) NSString *selectedCountry;
-@property (nonatomic, retain) Product *selectedProduct;
-@property (nonatomic, retain) UIToolbar *toolbar;
+@property (nonatomic, strong) MapView *mapView;
+@property (nonatomic, strong) UIImageView *mapShadowView;
+@property (nonatomic, strong) UIImageView *shadowView;
+@property (nonatomic, strong) UITableView *tableView;
+@property (nonatomic, strong) UIBarButtonItem *prevItem;
+@property (nonatomic, strong) UIBarButtonItem *nextItem;
+@property (nonatomic, strong) NSString *selectedCountry;
+@property (nonatomic, strong) Product *selectedProduct;
+@property (nonatomic, strong) UIToolbar *toolbar;
 
-- (id)initWithReports:(NSArray *)reportsArray selectedIndex:(NSInteger)selectedIndex;
+- (instancetype)initWithReports:(NSArray *)reportsArray selectedIndex:(NSInteger)selectedIndex;
 - (void)updateNavigationButtons;
 - (void)updateHeader;
 - (void)reloadData;
@@ -70,5 +65,3 @@ typedef enum ReportDetailViewMode {
 - (void)toggleMap:(id)sender;
 
 @end
-
-

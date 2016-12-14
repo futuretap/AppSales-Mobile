@@ -11,11 +11,10 @@
 
 @implementation AccountStatusView
 
-- (id)initWithFrame:(CGRect)frame account:(ASAccount *)anAccount
-{
+- (instancetype)initWithFrame:(CGRect)frame account:(ASAccount *)anAccount {
 	self = [super initWithFrame:frame];
 	if (self) {
-		account = [anAccount retain];
+		account = anAccount;
 		self.backgroundColor = [UIColor clearColor];
 		activityIndicator = [[UIActivityIndicatorView alloc] initWithFrame:CGRectMake(20, 5, 16, 16)];
 		activityIndicator.activityIndicatorViewStyle = UIActivityIndicatorViewStyleGray;
@@ -27,6 +26,8 @@
 		statusLabel.backgroundColor = [UIColor clearColor];
 		statusLabel.font = [UIFont systemFontOfSize:14.0];
 		statusLabel.textColor = [UIColor colorWithRed:0.322 green:0.357 blue:0.443 alpha:1.0];
+		statusLabel.shadowColor = [UIColor whiteColor];
+		statusLabel.shadowOffset = CGSizeMake(0, 1);
 		statusLabel.textAlignment = NSTextAlignmentCenter;
 		[self addSubview:statusLabel];
 		
@@ -38,8 +39,7 @@
 	return self;
 }
 
-- (void)updateStatus
-{
+- (void)updateStatus {
 	if (account.isDownloadingReports) {
 		[activityIndicator startAnimating];
 		statusLabel.text = account.downloadStatus;
@@ -49,19 +49,13 @@
 	}
 }
 
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
-{
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
 	[self updateStatus];
 }
 
-- (void)dealloc
-{
+- (void)dealloc {
 	[account removeObserver:self forKeyPath:@"isDownloadingReports"];
 	[account removeObserver:self forKeyPath:@"downloadStatus"];
-	[activityIndicator release];
-	[statusLabel release];
-	[account release];
-	[super dealloc];
 }
 
 @end

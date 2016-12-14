@@ -7,11 +7,10 @@
 //
 
 #import "AccountsViewController.h"
+#import "LoginManager.h"
 
-@interface AccountsViewController (AccountsViewController_VendorID)
+@interface AccountsViewController (AccountsViewController_VendorID) <LoginManagerDelegate>
 
 - (void)findVendorIDsWithLogin:(NSDictionary *)loginInfo;
-- (NSString *)stringFromSynchronousPostRequestWithURL:(NSURL *)URL bodyDictionary:(NSDictionary *)bodyDictionary;
-- (NSData *)dataFromSynchronousPostRequestWithURL:(NSURL *)URL bodyDictionary:(NSDictionary *)bodyDictionary response:(NSHTTPURLResponse **)response;
 
 @end

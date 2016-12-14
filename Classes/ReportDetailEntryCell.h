@@ -11,7 +11,6 @@
 @class AppIconView, ReportDetailEntry;
 
 @interface ReportDetailEntryCell : UITableViewCell {
-
 	ReportDetailEntry *entry;
 	
 	NSNumberFormatter *revenueFormatter;
@@ -25,6 +24,6 @@
 	UILabel *subtitleLabel;
 }
 
-@property (nonatomic, retain) ReportDetailEntry *entry;
+@property (nonatomic, strong) ReportDetailEntry *entry;
 
 @end

@@ -8,19 +8,22 @@
 
 #import <Foundation/Foundation.h>
 
-#define kIconManagerDownloadedIconNotificationAppID		@"appID"
-#define IconManagerDownloadedIconNotification			@"IconManagerDownloadedIconNotification"
+#define kIconManagerDownloadedIconNotificationAppID @"appID"
+#define IconManagerDownloadedIconNotification       @"IconManagerDownloadedIconNotification"
+#define kIconManagerClearedIconNotificationAppID    @"appID"
+#define IconManagerClearedIconNotification          @"IconManagerClearedIconNotification"
 
 @interface IconManager : NSObject {
-	
 	dispatch_queue_t queue;
 	NSMutableDictionary *iconCache;
 	NSMutableArray *downloadQueue;
 	BOOL isDownloading;
 }
 
-+ (id)sharedManager;
++ (instancetype)sharedManager;
+
 - (NSString *)iconDirectory;
 - (UIImage *)iconForAppID:(NSString *)appID;
+- (void)clearIconForAppID:(NSString *)appID;
 
 @end

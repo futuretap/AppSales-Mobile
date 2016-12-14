@@ -20,32 +20,29 @@
 @dynamic reviewSummary;
 @dynamic color;
 @dynamic account;
+@dynamic versions;
 @dynamic reviews;
 @dynamic transactions;
 @dynamic hidden;
 @dynamic customName;
 @dynamic SKU;
 @dynamic parentSKU;
-@dynamic currentVersion;
 @dynamic lastModified;
 @dynamic promoCodes;
 
-- (void)awakeFromInsert
-{
+- (void)awakeFromInsert {
 	[super awakeFromInsert];
-	self.color = [UIColor randomColor];
+	self.color = [UIColor randomCrayonColor];
 }
 
-- (NSString *)displayName
-{
+- (NSString *)displayName {
 	if (self.customName && ![self.customName isEqualToString:@""]) {
 		return self.customName;
 	}
 	return [NSString stringWithFormat:@"%@ (%@)", self.name, self.platform];
 }
 
-- (NSString *)defaultDisplayName
-{
+- (NSString *)defaultDisplayName {
 	return [NSString stringWithFormat:@"%@ (%@)", self.name, self.platform];
 }
 

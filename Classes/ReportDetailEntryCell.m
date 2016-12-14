@@ -7,6 +7,7 @@
 //
 
 #import "ReportDetailEntryCell.h"
+#import "DashboardAppCell.h"
 #import "AppIconView.h"
 #import "Product.h"
 #import "CurrencyManager.h"
@@ -16,126 +17,118 @@
 
 @synthesize entry;
 
-- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
-{
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
 	self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
 	if (self) {
-		//self.accessoryType = UITableViewCellAccessoryDetailDisclosureButton;
+		CGSize contentSize = self.contentView.bounds.size;
 		
-		iconView = [[AppIconView alloc] initWithFrame:CGRectMake(8, 8, 24, 24)];
+		CGFloat iconOrigin = (contentSize.height - kIconSize) / 2.0f;
+		iconView = [[AppIconView alloc] initWithFrame:CGRectMake(iconOrigin, iconOrigin, kIconSize, kIconSize)];
 		[self.contentView addSubview:iconView];
 		
-		revenueLabel = [[UILabel alloc] initWithFrame:CGRectMake(40, 4, 82, 30)];
-		revenueLabel.font = [UIFont systemFontOfSize:17.0];
+		CGFloat labelOriginX = CGRectGetMaxX(iconView.frame) + iconOrigin;
+		revenueLabel = [[UILabel alloc] initWithFrame:CGRectMake(labelOriginX, 0.0f, 82.0f, contentSize.height)];
+		revenueLabel.autoresizingMask = UIViewAutoresizingFlexibleHeight;
 		revenueLabel.backgroundColor = [UIColor clearColor];
-		revenueLabel.adjustsFontSizeToFitWidth = YES;
+		revenueLabel.font = [UIFont systemFontOfSize:17.0f weight:UIFontWeightRegular];
 		revenueLabel.textAlignment = NSTextAlignmentRight;
+		revenueLabel.textColor = [UIColor blackColor];
+		revenueLabel.adjustsFontSizeToFitWidth = YES;
 		[self.contentView addSubview:revenueLabel];
 		
-		barBackgroundView = [[UIView alloc] initWithFrame:CGRectMake(130, 5, 180, 17)];
-		barBackgroundView.backgroundColor = [UIColor colorWithWhite:0.8 alpha:1.0];
+		self.separatorInset = UIEdgeInsetsMake(0.0f, labelOriginX, 0.0f, 0.0f);
+		
+		CGFloat barOriginX = CGRectGetMaxX(revenueLabel.frame) + 8.0f;
+		barBackgroundView = [[UIView alloc] initWithFrame:CGRectMake(barOriginX, iconOrigin, contentSize.width - barOriginX - iconOrigin, 17.0f)];
 		barBackgroundView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+		barBackgroundView.backgroundColor = [UIColor colorWithWhite:0.8f alpha:1.0f];
 		[self.contentView addSubview:barBackgroundView];
 		
-		barView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 0, 17)];
-		barView.backgroundColor = [UIColor colorWithRed:0.541 green:0.612 blue:0.671 alpha:1.0];
+		barView = [[UIView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 0.0f, CGRectGetHeight(barBackgroundView.frame))];
+		barView.backgroundColor = [UIColor colorWithRed:0.541f green:0.612f blue:0.671f alpha:1.0f];
 		[barBackgroundView addSubview:barView];
 		
-		percentageLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, barBackgroundView.bounds.size.width - 2, 17)];
+		percentageLabel = [[UILabel alloc] initWithFrame:CGRectMake(0.0f, 0.0f, barBackgroundView.bounds.size.width - 4.0f, CGRectGetHeight(barBackgroundView.frame))];
 		percentageLabel.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin;
-		percentageLabel.textAlignment = NSTextAlignmentRight;
 		percentageLabel.backgroundColor = [UIColor clearColor];
-		percentageLabel.font = [UIFont systemFontOfSize:11.0];
+		percentageLabel.font = [UIFont systemFontOfSize:11.0f weight:UIFontWeightMedium];
+		percentageLabel.textAlignment = NSTextAlignmentRight;
 		percentageLabel.textColor = [UIColor whiteColor];
 		[barBackgroundView addSubview:percentageLabel];
 		
-		subtitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(130, 24, 147, 12)];
-        subtitleLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+		subtitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(barOriginX, CGRectGetMaxY(barBackgroundView.frame), CGRectGetWidth(barBackgroundView.frame), contentSize.height - CGRectGetMaxY(barBackgroundView.frame))];
+		subtitleLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
 		subtitleLabel.backgroundColor = [UIColor clearColor];
-		subtitleLabel.font = [UIFont systemFontOfSize:11.0];
+		subtitleLabel.font = [UIFont systemFontOfSize:11.0f weight:UIFontWeightRegular];
+		subtitleLabel.textAlignment = NSTextAlignmentLeft;
 		subtitleLabel.textColor = [UIColor darkGrayColor];
-		subtitleLabel.highlightedTextColor = [UIColor darkGrayColor];
 		[self.contentView addSubview:subtitleLabel];
 		
 		revenueFormatter = [[NSNumberFormatter alloc] init];
-		[revenueFormatter setNumberStyle:NSNumberFormatterDecimalStyle];
-		[revenueFormatter setMinimumFractionDigits:2];
-		[revenueFormatter setMaximumFractionDigits:2];
+		revenueFormatter.numberStyle = NSNumberFormatterCurrencyStyle;
+		revenueFormatter.currencyCode = [CurrencyManager sharedManager].baseCurrency;
 		
 		percentageFormatter = [[NSNumberFormatter alloc] init];
-		[percentageFormatter setMaximumFractionDigits:1];
-		[percentageFormatter setNumberStyle:NSNumberFormatterPercentStyle];
+		percentageFormatter.maximumFractionDigits = 1;
+		percentageFormatter.numberStyle = NSNumberFormatterPercentStyle;
+		
+		self.separatorInset = UIEdgeInsetsMake(0.0f, labelOriginX, 0.0f, 0.0f);
 	}
 	return self;
 }
 
-- (void)setEntry:(ReportDetailEntry *)newEntry
-{
-	[newEntry retain];
-	[entry release];
+- (void)layoutSubviews {
+	[super layoutSubviews];
+	
+	CGFloat percentage = entry.percentage;
+	Product *product = entry.product;
+	NSString *country = entry.countryCode;
+	BOOL hideBar = (!product && (!country || [country isEqualToString:@"WW"]));
+	if (!hideBar) {
+		percentageLabel.text = [percentageFormatter stringFromNumber:@(percentage)];
+		barView.frame = CGRectMake(0.0f, 0.0f, CGRectGetWidth(barBackgroundView.frame) * MAX(percentage, 0.0f), CGRectGetHeight(barBackgroundView.frame));
+	}
+}
+
+- (void)setEntry:(ReportDetailEntry *)newEntry {
 	entry = newEntry;
 	
-	NSString *revenueString = [revenueFormatter stringFromNumber:[NSNumber numberWithFloat:entry.revenue]];
-	revenueLabel.text = [NSString stringWithFormat:@"%@%@", [[CurrencyManager sharedManager] baseCurrencyDescription], revenueString];
-	
-	float percentage = entry.percentage;
+	CGFloat percentage = entry.percentage;
 	Product *product = entry.product;
-	NSString *country = entry.country;
-	BOOL hideBar = (!product && (!country || [country isEqualToString:@"world"]));
+	NSString *country = entry.countryCode;
+	BOOL hideBar = (!product && (!country || [country isEqualToString:@"WW"]));
 	barBackgroundView.hidden = hideBar;
 	barView.hidden = hideBar;
 	percentageLabel.hidden = hideBar;
 	subtitleLabel.hidden = hideBar;
 	
 	if (!hideBar) {
-		percentageLabel.text = [percentageFormatter stringFromNumber:[NSNumber numberWithFloat:percentage]];
-		barView.frame = CGRectMake(0, 0, barBackgroundView.bounds.size.width * MAX(percentage, 0.0), 17);
+		percentageLabel.text = [percentageFormatter stringFromNumber:@(percentage)];
+		barView.frame = CGRectMake(0.0f, 0.0f, CGRectGetWidth(barBackgroundView.frame) * MAX(percentage, 0.0f), CGRectGetHeight(barBackgroundView.frame));
 	}
 	
 	if (product) {
-		iconView.productID = product.productID;
+		iconView.product = product;
 	} else {
-		iconView.productID = nil;
-		if (country) {
-			NSString *flagImageName = [NSString stringWithFormat:@"%@.png", [country lowercaseString]];
-			UIImage *flagImage = [UIImage imageNamed:flagImageName];
-			iconView.image = flagImage;
-		} else {
-			iconView.image = [UIImage imageNamed:@"AllApps.png"];
-		}
+		iconView.product = nil;
+		iconView.maskEnabled = (country == nil);
+		iconView.image = [UIImage imageNamed:(country ?: @"AllApps")];
 	}
+	
+	revenueLabel.text = [revenueFormatter stringFromNumber:@(entry.revenue)];
 	subtitleLabel.text = entry.subtitle;
 }
 
-- (void)setSelected:(BOOL)selected animated:(BOOL)animated
-{
+- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
 	[super setSelected:selected animated:animated];
 	barBackgroundView.backgroundColor = [UIColor colorWithWhite:0.8 alpha:1.0];
 	barView.backgroundColor = [UIColor colorWithRed:0.541 green:0.612 blue:0.671 alpha:1.0];
-	//revenueLabel.shadowColor = [UIColor blackColor];
-	//revenueLabel.shadowColor = (self.highlighted || self.selected) ? [UIColor blackColor] : [UIColor whiteColor];
 }
 
-- (void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated
-{
+- (void)setHighlighted:(BOOL)highlighted animated:(BOOL)animated {
 	[super setHighlighted:highlighted animated:animated];
 	barBackgroundView.backgroundColor = [UIColor colorWithWhite:0.8 alpha:1.0];
 	barView.backgroundColor = [UIColor colorWithRed:0.541 green:0.612 blue:0.671 alpha:1.0];
-	//revenueLabel.shadowColor = (self.highlighted || self.selected) ? [UIColor blackColor] : [UIColor whiteColor];
-}
-
-- (void)dealloc
-{
-	[entry release];
-	[iconView release];
-	[revenueLabel release];
-	[barBackgroundView release];
-	[barView release];
-	[percentageLabel release];
-	[subtitleLabel release];
-	[revenueFormatter release];
-	[percentageFormatter release];
-	[super dealloc];
 }
 
 @end

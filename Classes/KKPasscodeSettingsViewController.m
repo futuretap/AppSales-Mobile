@@ -20,133 +20,142 @@
 #import "KKPasscodeViewController.h"
 #import "KKPasscodeLock.h"
 
-
 @implementation KKPasscodeSettingsViewController
-
-
-@synthesize delegate = _delegate;
 
 #pragma mark -
 #pragma mark UIViewController
 
-- (void)viewDidLoad
-{
+- (void)viewDidLoad {
 	[super viewDidLoad];
 	self.navigationItem.title = @"Passcode Lock";
-		
-	_eraseDataSwitch = [[UISwitch alloc] init];
-	[_eraseDataSwitch addTarget:self action:@selector(eraseDataSwitchChanged:) forControlEvents:UIControlEventValueChanged];
+	
+	unlockWithTouchIDSwitch = [[UISwitch alloc] init];
+	[unlockWithTouchIDSwitch addTarget:self action:@selector(unlockWithTouchIDSwitchChanged:) forControlEvents:UIControlEventValueChanged];
+	
+	eraseDataSwitch = [[UISwitch alloc] init];
+	[eraseDataSwitch addTarget:self action:@selector(eraseDataSwitchChanged:) forControlEvents:UIControlEventValueChanged];
 }
 
-- (void)viewWillAppear:(BOOL)animated
-{
+- (void)viewWillAppear:(BOOL)animated {
 	[super viewWillAppear:animated];
-	_passcodeLockOn = [[KKKeychain getStringForKey:@"passcode_on"] isEqualToString:@"YES"];
-	_eraseDataOn = [[KKKeychain getStringForKey:@"erase_data_on"] isEqualToString:@"YES"];
-	_eraseDataSwitch.on = _eraseDataOn;
+	passcodeLockOn = [[KKKeychain getStringForKey:@"passcode_on"] isEqualToString:@"YES"];
+	unlockWithTouchIDOn = [[KKKeychain getStringForKey:@"unlock_with_touch_id"] isEqualToString:@"YES"];
+	unlockWithTouchIDSwitch.on = unlockWithTouchIDOn;
+	eraseDataOn = [[KKKeychain getStringForKey:@"erase_data_on"] isEqualToString:@"YES"];
+	eraseDataSwitch.on = eraseDataOn;
 }
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation
-{
-	return (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) || (toInterfaceOrientation == UIInterfaceOrientationPortrait);
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation {
+	return ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad) || (toInterfaceOrientation == UIInterfaceOrientationPortrait);
 }
 
 #pragma mark -
 #pragma mark UIActionSheetDelegate
 
-- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex
-{
+- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex {
 	if (buttonIndex == 0) {
-		_eraseDataOn = YES;
+		eraseDataOn = YES;
 		[KKKeychain setString:@"YES" forKey:@"erase_data_on"];
 	} else {
-		_eraseDataOn = NO;
+		eraseDataOn = NO;
 		[KKKeychain setString:@"NO" forKey:@"erase_data_on"];
 	}
-	[_eraseDataSwitch setOn:_eraseDataOn animated:YES];
+	[eraseDataSwitch setOn:eraseDataOn animated:YES];
 }
 
-- (void)eraseDataSwitchChanged:(id)sender 
-{
-	if (_eraseDataSwitch.on) {
-		NSString* title = [NSString stringWithFormat:@"All data in this app will be erased after %d failed passcode attempts.", [[KKPasscodeLock sharedLock] attemptsAllowed]];
+- (void)eraseDataSwitchChanged:(id)sender {
+	if (eraseDataSwitch.on) {
+		NSString *title = [NSString stringWithFormat:@"All data in this app will be erased after %lu failed passcode attempts.", (unsigned long)[[KKPasscodeLock sharedLock] attemptsAllowed]];
 		
 		UIActionSheet *sheet = [[UIActionSheet alloc] initWithTitle:title delegate:self cancelButtonTitle:@"Cancel" destructiveButtonTitle:@"Enable" otherButtonTitles:nil];
 		[sheet showInView:self.view];
-		[sheet release];
 	} else {
-		_eraseDataOn = NO;
+		eraseDataOn = NO;
 		[KKKeychain setString:@"NO" forKey:@"erase_data_on"];
 	}		 
+}
+
+- (void)unlockWithTouchIDSwitchChanged:(id)sender {
+	unlockWithTouchIDOn = unlockWithTouchIDSwitch.on;
+	[KKKeychain setString:(unlockWithTouchIDSwitch.on ? @"YES" : @"NO") forKey:@"unlock_with_touch_id"];
 }
 
 #pragma mark -
 #pragma mark Table view data source
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
-{
-	if ([[KKPasscodeLock sharedLock] eraseOption]) {
-		return 3;
-	}
-	
-	return 2;
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+	return 1 + KKPasscodeViewController.hasTouchID + [KKPasscodeLock sharedLock].eraseOption;
 }
 
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
-{
-	return 1;
-}
-
-- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section
-{
-	if (section == 2) {
-		return [NSString stringWithFormat:@"Erase all data in this app after %d failed passcode attempts.", [[KKPasscodeLock sharedLock] attemptsAllowed]];;
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+	NSInteger numberOfRows = 0;
+	if (section == 0) {
+		numberOfRows = 2;
 	} else {
-		return @"";
+		numberOfRows = 1;
 	}
+	return numberOfRows;
 }
 
-- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
-{
+- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+	if (section == (1 + KKPasscodeViewController.hasTouchID)) {
+		return [NSString stringWithFormat:@"Erase all data in this app after %lu failed passcode attempts.", (unsigned long)[[KKPasscodeLock sharedLock] attemptsAllowed]];;
+	}
+	return nil;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
 	static NSString *CellIdentifier = @"Cell";
 	
 	UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
 	if (cell == nil) {
-		cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier] autorelease];
+		cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
 	}
 	
 	if (indexPath.section == 0) {
-		if (_passcodeLockOn) {
-			cell.textLabel.text = @"Turn Passcode Off";
-		} else {
-			cell.textLabel.text = @"Turn Passcode On";
-		}
-		cell.textLabel.textColor = [UIColor blackColor];
-		cell.textLabel.textAlignment = NSTextAlignmentCenter;
-		cell.accessoryView = nil;
-		cell.selectionStyle = UITableViewCellSelectionStyleBlue;
-	} else if (indexPath.section == 1) {
-		cell.textLabel.text = @"Change Passcode";
-		if (_passcodeLockOn) {
+		if (indexPath.row == 0) {
+			if (passcodeLockOn) {
+				cell.textLabel.text = @"Turn Passcode Off";
+			} else {
+				cell.textLabel.text = @"Turn Passcode On";
+			}
 			cell.textLabel.textColor = [UIColor blackColor];
-			cell.selectionStyle = UITableViewCellSelectionStyleBlue;
+			cell.textLabel.textAlignment = NSTextAlignmentCenter;
+			cell.accessoryView = nil;
+			cell.selectionStyle = UITableViewCellSelectionStyleDefault;
+		} else if (indexPath.row == 1) {
+			cell.textLabel.text = @"Change Passcode";
+			if (passcodeLockOn) {
+				cell.textLabel.textColor = [UIColor blackColor];
+				cell.selectionStyle = UITableViewCellSelectionStyleDefault;
+			} else {
+				cell.textLabel.textColor = [UIColor grayColor];
+				cell.selectionStyle = UITableViewCellSelectionStyleNone;
+			}
+			cell.textLabel.textAlignment = NSTextAlignmentCenter;
+			cell.accessoryView = nil;
+		}
+	} else if (indexPath.section == KKPasscodeViewController.hasTouchID) {
+		cell.textLabel.text = @"Unlock with Touch ID";
+		cell.textLabel.textAlignment = NSTextAlignmentLeft;
+		cell.accessoryView = unlockWithTouchIDSwitch;
+		cell.selectionStyle = UITableViewCellSelectionStyleNone;
+		unlockWithTouchIDSwitch.enabled = passcodeLockOn;
+		if (passcodeLockOn) {
+			cell.textLabel.textColor = [UIColor blackColor];
 		} else {
 			cell.textLabel.textColor = [UIColor grayColor];
-			cell.selectionStyle = UITableViewCellSelectionStyleNone;
 		}
-		cell.textLabel.textAlignment = NSTextAlignmentCenter;
-		cell.accessoryView = nil;
-	} else if (indexPath.section == 2) {
+	} else if (indexPath.section == (1 + KKPasscodeViewController.hasTouchID)) {
 		cell.textLabel.text = @"Erase Data";
 		cell.textLabel.textAlignment = NSTextAlignmentLeft;
-		cell.accessoryView = _eraseDataSwitch;
+		cell.accessoryView = eraseDataSwitch;
 		cell.selectionStyle = UITableViewCellSelectionStyleNone;
-		if (_passcodeLockOn) {
+		eraseDataSwitch.enabled = passcodeLockOn;
+		if (passcodeLockOn) {
 			cell.textLabel.textColor = [UIColor blackColor];
-			_eraseDataSwitch.enabled = YES;
 		} else {
 			cell.textLabel.textColor = [UIColor grayColor];
-			_eraseDataSwitch.enabled = NO;
 		}
 	}
 	
@@ -156,65 +165,65 @@
 #pragma mark -
 #pragma mark Table view delegate
 
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
-{
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
 	if (indexPath.section == 0) {
-		KKPasscodeViewController *vc = [[[KKPasscodeViewController alloc] initWithNibName:nil 
-																																							 bundle:nil] autorelease];
-		vc.delegate = self;
-		
-		if (_passcodeLockOn) {
-			vc.mode = KKPasscodeModeDisabled;
-		} else {
-			vc.mode = KKPasscodeModeSet;
-		}
-		
-		UINavigationController *nav = [[[UINavigationController alloc] initWithRootViewController:vc] autorelease];
+		if (indexPath.row == 0) {
+			KKPasscodeViewController *vc = [[KKPasscodeViewController alloc] init];
+			vc.delegate = self;
+			
+			if (passcodeLockOn) {
+				vc.mode = KKPasscodeModeDisabled;
+				vc.startTouchID = YES;
+			} else {
+				vc.mode = KKPasscodeModeSet;
+			}
+			
+			UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:vc];
 		 
-		if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-			nav.modalPresentationStyle = UIModalPresentationFormSheet;
-			nav.navigationBar.barStyle = UIBarStyleBlack;
-			nav.navigationBar.opaque = NO;
-		} else {
-			nav.navigationBar.tintColor = self.navigationController.navigationBar.tintColor;
-			nav.navigationBar.translucent = self.navigationController.navigationBar.translucent;
-			nav.navigationBar.opaque = self.navigationController.navigationBar.opaque;
-			nav.navigationBar.barStyle = self.navigationController.navigationBar.barStyle;		
+			if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad) {
+				nav.modalPresentationStyle = UIModalPresentationFormSheet;
+				nav.navigationBar.barStyle = UIBarStyleBlack;
+				nav.navigationBar.opaque = NO;
+			} else {
+				nav.navigationBar.tintColor = self.navigationController.navigationBar.tintColor;
+				nav.navigationBar.translucent = self.navigationController.navigationBar.translucent;
+				nav.navigationBar.opaque = self.navigationController.navigationBar.opaque;
+				nav.navigationBar.barStyle = self.navigationController.navigationBar.barStyle;
+			}
+			
+			[self.navigationController presentViewController:nav animated:YES completion:nil];
+		} else if (indexPath.row == passcodeLockOn) {
+			KKPasscodeViewController *vc = [[KKPasscodeViewController alloc] init];
+			vc.delegate = self;
+			
+			vc.mode = KKPasscodeModeChange;
+			
+			UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:vc];
+			
+			
+			if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad) {
+				nav.modalPresentationStyle = UIModalPresentationFormSheet;
+				nav.navigationBar.barStyle = UIBarStyleBlack;
+				nav.navigationBar.opaque = NO;
+			} else {
+				nav.navigationBar.tintColor = self.navigationController.navigationBar.tintColor;
+				nav.navigationBar.translucent = self.navigationController.navigationBar.translucent;
+				nav.navigationBar.opaque = self.navigationController.navigationBar.opaque;
+				nav.navigationBar.barStyle = self.navigationController.navigationBar.barStyle;
+			}
+			
+			[self.navigationController presentViewController:nav animated:YES completion:nil];
 		}
-		
-		[self.navigationController presentViewController:nav animated:YES completion:nil];
-		
-		
-	} else if (indexPath.section == 1 && _passcodeLockOn) {
-		KKPasscodeViewController *vc = [[[KKPasscodeViewController alloc] initWithNibName:nil bundle:nil] autorelease];
-		vc.delegate = self;
-		
-		vc.mode = KKPasscodeModeChange;							
-		
-		UINavigationController *nav = [[[UINavigationController alloc] initWithRootViewController:vc] autorelease];
-		
-		
-		if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-			nav.modalPresentationStyle = UIModalPresentationFormSheet;
-			nav.navigationBar.barStyle = UIBarStyleBlack;
-			nav.navigationBar.opaque = NO;
-		} else {
-			nav.navigationBar.tintColor = self.navigationController.navigationBar.tintColor;
-			nav.navigationBar.translucent = self.navigationController.navigationBar.translucent;
-			nav.navigationBar.opaque = self.navigationController.navigationBar.opaque;
-			nav.navigationBar.barStyle = self.navigationController.navigationBar.barStyle;		
-		}
-		
-		[self.navigationController presentViewController:nav animated:YES completion:nil];
 	}
 }
 
-- (void)didSettingsChanged:(KKPasscodeViewController*)viewController 
-{
-	_passcodeLockOn = [[KKKeychain getStringForKey:@"passcode_on"] isEqualToString:@"YES"];
-	_eraseDataOn = [[KKKeychain getStringForKey:@"erase_data_on"] isEqualToString:@"YES"];
-	_eraseDataSwitch.on = _eraseDataOn;
-
+- (void)didSettingsChanged:(KKPasscodeViewController *)viewController  {
+	passcodeLockOn = [[KKKeychain getStringForKey:@"passcode_on"] isEqualToString:@"YES"];
+	unlockWithTouchIDOn = [[KKKeychain getStringForKey:@"unlock_with_touch_id"] isEqualToString:@"YES"];
+	unlockWithTouchIDSwitch.on = unlockWithTouchIDOn;
+	eraseDataOn = [[KKKeychain getStringForKey:@"erase_data_on"] isEqualToString:@"YES"];
+	eraseDataSwitch.on = eraseDataOn;
+	
 	[self.tableView reloadData];
 	
 	if ([_delegate respondsToSelector:@selector(didSettingsChanged:)]) {
@@ -223,15 +232,8 @@
 	
 }
 
-#pragma mark -
-#pragma mark Memory management
-
-- (void)dealloc
-{
-	[_eraseDataSwitch release];
-	[super dealloc];
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations {
+	return UIInterfaceOrientationMaskPortrait;
 }
 
-
 @end
-

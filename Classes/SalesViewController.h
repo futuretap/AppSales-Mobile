@@ -1,5 +1,5 @@
 //
-//  DashboardViewController.h
+//  SalesViewController.h
 //  AppSales
 //
 //  Created by Ole Zorn on 30.06.11.
@@ -9,30 +9,33 @@
 #import <UIKit/UIKit.h>
 #import "GraphView.h"
 #import "DashboardViewController.h"
-#import "ColorPickerViewController.h"
 
 @class ASAccount, Report, Product;
 @protocol ReportSummary;
 
-typedef enum DashboardViewMode { 
+typedef NS_ENUM(NSInteger, DashboardViewMode) {
 	DashboardViewModeRevenue = 0,
 	DashboardViewModeSales,
 	DashboardViewModeUpdates,
+	DashboardViewModeRedownloads,
 	DashboardViewModeEducationalSales,
 	DashboardViewModeGiftPurchases,
-	DashboardViewModePromoCodes
-} DashboardViewMode;
+	DashboardViewModePromoCodes,
+	DashboardViewModeTotalRevenue,
+	DashboardViewModeTotalSales
+};
 
 @interface SalesViewController : DashboardViewController <UIActionSheetDelegate, GraphViewDelegate, GraphViewDataSource> {
-	
 	NSCalendar *calendar;
+	NSDateFormatter *dateFormatter;
+	NSNumberFormatter *numberFormatter;
 	
 	UIInterfaceOrientation previousOrientation;
 	DashboardViewMode viewMode;
 	BOOL showNumberOfSales;
 	BOOL showFiscalMonths;
 	BOOL showWeeks;
-	int selectedTab;
+	NSInteger selectedTab;
 	
 	GraphView *graphView;
 	
@@ -46,13 +49,13 @@ typedef enum DashboardViewMode {
 	UIPopoverController *selectedReportPopover;
 }
 
-@property (nonatomic, retain) NSMutableArray *sortedDailyReports;
-@property (nonatomic, retain) NSMutableArray *sortedWeeklyReports;
-@property (nonatomic, retain) NSMutableArray *sortedCalendarMonthReports;
-@property (nonatomic, retain) NSMutableArray *sortedFiscalMonthReports;
+@property (nonatomic, strong) NSMutableArray *sortedDailyReports;
+@property (nonatomic, strong) NSMutableArray *sortedWeeklyReports;
+@property (nonatomic, strong) NSMutableArray *sortedCalendarMonthReports;
+@property (nonatomic, strong) NSMutableArray *sortedFiscalMonthReports;
 @property (nonatomic, assign) DashboardViewMode viewMode;
-@property (nonatomic, retain) GraphView *graphView;
-@property (nonatomic, retain) UIBarButtonItem *downloadReportsButtonItem;
-@property (nonatomic, retain) UIPopoverController *selectedReportPopover;
+@property (nonatomic, strong) GraphView *graphView;
+@property (nonatomic, strong) UIBarButtonItem *downloadReportsButtonItem;
+@property (nonatomic, strong) UIPopoverController *selectedReportPopover;
 
 @end

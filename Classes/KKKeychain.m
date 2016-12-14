@@ -6,7 +6,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//    http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,8 +20,7 @@
 
 @implementation KKKeychain
 
-+ (NSString*)appName 
-{	
++ (NSString *)appName  {
 	NSBundle *bundle = [NSBundle bundleForClass:[self class]];
 	NSString *appName = [bundle objectForInfoDictionaryKey:@"CFBundleDisplayName"];
 	if (!appName) {
@@ -30,8 +29,7 @@
 	return appName;
 }
 
-+ (BOOL)setString:(NSString*)string forKey:(NSString*)key 
-{
++ (BOOL)setString:(NSString *)string forKey:(NSString *)key  {
 	if (string == nil || key == nil) {
 		return NO;
 	}
@@ -55,24 +53,23 @@
 		if (string != nil) {
 			NSMutableDictionary *addDict = existsQueryDictionary;
 			[addDict setObject:data forKey:(id)kSecValueData];
-      
+	  
 			res = SecItemAdd((CFDictionaryRef)addDict, NULL);
-			NSAssert1(res == errSecSuccess, @"Recieved %ld from SecItemAdd!", res);
+			NSAssert1(res == errSecSuccess, @"Recieved %ld from SecItemAdd!", (long)res);
 		}
 	} else if (res == errSecSuccess) {
 		// Modify an existing one
 		// Actually pull it now of the keychain at this point.
-		NSDictionary *attributeDict = [NSDictionary dictionaryWithObject:data forKey:(id)kSecValueData];
+		NSDictionary *attributeDict = @{(id)kSecValueData: data};
 		res = SecItemUpdate((CFDictionaryRef)existsQueryDictionary, (CFDictionaryRef)attributeDict);
-		NSAssert1(res == errSecSuccess, @"SecItemUpdated returned %ld!", res);
+		NSAssert1(res == errSecSuccess, @"SecItemUpdated returned %ld!", (long)res);
 	} else {
-		NSAssert1(NO, @"Received %ld from SecItemCopyMatching!", res);
+		NSAssert1(NO, @"Received %ld from SecItemCopyMatching!", (long)res);
 	}
 	return YES;
 }
 
-+ (NSString*)getStringForKey:(NSString*)key 
-{  
++ (NSString *)getStringForKey:(NSString *)key  {
 	key = [NSString stringWithFormat:@"%@ - %@", [KKKeychain appName], key];
 	NSMutableDictionary *existsQueryDictionary = [NSMutableDictionary dictionary];
 	[existsQueryDictionary setObject:(id)kSecClassGenericPassword forKey:(id)kSecClass];
@@ -82,17 +79,16 @@
 	[existsQueryDictionary setObject:key forKey:(id)kSecAttrAccount];
 	
 	// We want the data back!
-	NSData *data = nil;
+	CFDataRef data = nil;
 	
 	[existsQueryDictionary setObject:(id)kCFBooleanTrue forKey:(id)kSecReturnData];
 	
 	OSStatus res = SecItemCopyMatching((CFDictionaryRef)existsQueryDictionary, (CFTypeRef *)&data);
-	[data autorelease];
 	if (res == errSecSuccess) {
-		NSString *string = [[[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] autorelease];
+		NSString *string = [[NSString alloc] initWithData:(__bridge NSData *)data encoding:NSUTF8StringEncoding];
 		return string;
 	} else {
-		NSAssert1(res == errSecItemNotFound, @"SecItemCopyMatching returned %ld!", res);
+		NSAssert1(res == errSecItemNotFound, @"SecItemCopyMatching returned %ld!", (long)res);
 	}		
 	
 	return nil;

@@ -11,54 +11,55 @@
 #import "CurrencyManager.h"
 #import "ReportDownloadOperation.h"
 #import "ReportDownloadCoordinator.h"
-#import "SSKeychain.h"
+#import "PromoCodeOperation.h"
+#import "SAMKeychain.h"
 #import "ASAccount.h"
 #import "SalesViewController.h"
+#import "ReviewsViewController.h"
+#import "PaymentsViewController.h"
+#import "PromoCodesViewController.h"
+#import "PromoCodesLicenseViewController.h"
 
 @implementation AppSalesAppDelegate
 
 @synthesize window, accountsViewController, accountsPopover;
 
-- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
-{
+- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
 	[[KKPasscodeLock sharedLock] setDefaultSettings];
 	[[KKPasscodeLock sharedLock] setEraseOption:NO];
 	
-	srandom(time(NULL));
-	self.window = [[[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]] autorelease];
-	self.window.tintColor = [UIColor colorWithRed:0.28 green:0.51 blue:0.69 alpha:1.0];
+	srandom((unsigned)time(NULL));
+	self.window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
 	
 	NSString *currencyCode = [[NSLocale currentLocale] objectForKey:NSLocaleCurrencyCode];
 	if (![[CurrencyManager sharedManager].availableCurrencies containsObject:currencyCode]) {
 		currencyCode = @"USD";
 	}
 	
-	NSDictionary *defaults = [NSDictionary dictionaryWithObjectsAndKeys:
-							  [NSNumber numberWithBool:YES], kSettingDownloadPayments,
-							  currencyCode, @"CurrencyManagerBaseCurrency",
-							  nil];
+	NSDictionary *defaults = @{kSettingDownloadPayments: @(YES),
+							   @"CurrencyManagerBaseCurrency": currencyCode};
 	[[NSUserDefaults standardUserDefaults] registerDefaults:defaults];
+
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(promoCodeLicenseAgreementLoaded:) name:@"PromoCodeOperationLoadedLicenseAgreementNotification" object:nil];
 	
-	BOOL iPad = [[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad;
+	BOOL iPad = [UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad;
 	if (!iPad) {
-		AccountsViewController *rootViewController = [[[AccountsViewController alloc] initWithStyle:UITableViewStyleGrouped] autorelease];
+		AccountsViewController *rootViewController = [[AccountsViewController alloc] initWithStyle:UITableViewStyleGrouped];
 		rootViewController.managedObjectContext = self.managedObjectContext;
-		UINavigationController *navigationController = [[[UINavigationController alloc] initWithRootViewController:rootViewController] autorelease];
+		UINavigationController *navigationController = [[UINavigationController alloc] initWithRootViewController:rootViewController];
 		navigationController.toolbarHidden = NO;
-		navigationController.navigationBar.translucent = NO;
 		self.accountsViewController = rootViewController;
 		
 		self.window.rootViewController = navigationController;
 		[self.window makeKeyAndVisible];
 	} else {
-		self.accountsViewController = [[[AccountsViewController alloc] initWithStyle:UITableViewStyleGrouped] autorelease];
+		self.accountsViewController = [[AccountsViewController alloc] initWithStyle:UITableViewStyleGrouped];
 		self.accountsViewController.managedObjectContext = self.managedObjectContext;
 		self.accountsViewController.preferredContentSize = CGSizeMake(320, 480);
 		self.accountsViewController.delegate = self;
-		UINavigationController *accountsNavController = [[[UINavigationController alloc] initWithRootViewController:self.accountsViewController] autorelease];
-		accountsNavController.navigationBar.translucent = NO;
+		UINavigationController *accountsNavController = [[UINavigationController alloc] initWithRootViewController:self.accountsViewController];
 		accountsNavController.toolbarHidden = NO;
-		self.accountsPopover = [[[UIPopoverController alloc] initWithContentViewController:accountsNavController] autorelease];	
+		self.accountsPopover = [[UIPopoverController alloc] initWithContentViewController:accountsNavController];	
 		[self loadAccount:nil];
 		[self.window makeKeyAndVisible];
 	}
@@ -70,18 +71,18 @@
 	
 	[[CurrencyManager sharedManager] refreshIfNeeded];
 	
-	NSString* productSortByValue = [[NSUserDefaults standardUserDefaults] objectForKey:@"ProductSortby"];
-	if (productSortByValue==nil) {
+	NSString *productSortByValue = [[NSUserDefaults standardUserDefaults] objectForKey:@"ProductSortby"];
+	if (productSortByValue == nil) {
 		[[NSUserDefaults standardUserDefaults] setObject:@"productId" forKey:@"ProductSortby"];
 	}
 	
-	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(reportDownloadFailed:) name:ASReportDownloadFailedNotification object:nil];
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(promoCodeDownloadFailed:) name:ASPromoCodeDownloadFailedNotification object:nil];
 	
-	if ([launchOptions objectForKey:UIApplicationLaunchOptionsURLKey]) {
+	if (launchOptions[UIApplicationLaunchOptionsURLKey]) {
 		[self.accountsViewController performSelector:@selector(downloadReports:) withObject:nil afterDelay:0.0];
 	}
 	
-	[self showPasscodeLockIfNeeded];
+	[self showPasscodeLockIfNeededWithTouchID:YES];
 	if (iPad) {
 		//Restore previously-selected account:
 		NSString *accountIDURIString = [[NSUserDefaults standardUserDefaults] stringForKey:kSettingSelectedAccountID];
@@ -99,15 +100,25 @@
 	return YES;
 }
 
-- (void)selectAccount:(id)sender
-{
+- (UIInterfaceOrientationMask)application:(UIApplication *)application supportedInterfaceOrientationsForWindow:(UIWindow *)window {
+	BOOL iPad = ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad);
+	NSUInteger orientations = iPad ? UIInterfaceOrientationMaskAll : UIInterfaceOrientationMaskAllButUpsideDown;
+	
+	if (self.window.rootViewController) {
+		UIViewController *presentedViewController = [[(UINavigationController *)self.window.rootViewController viewControllers] lastObject];
+		orientations = [presentedViewController supportedInterfaceOrientations];
+	}
+	
+	return orientations;
+}
+
+- (void)selectAccount:(id)sender {
 	if (!self.window.rootViewController.presentedViewController) {
 		[self.accountsPopover presentPopoverFromRect:CGRectMake(50, 50, 1, 1) inView:self.window.rootViewController.view permittedArrowDirections:UIPopoverArrowDirectionUp animated:YES];
 	}
 }
 
-- (void)accountsViewController:(AccountsViewController *)viewController didSelectAccount:(ASAccount *)account
-{
+- (void)accountsViewController:(AccountsViewController *)viewController didSelectAccount:(ASAccount *)account {
 	[self.accountsPopover dismissPopoverAnimated:YES];
 	[self loadAccount:account];
 	
@@ -115,38 +126,53 @@
 	[[NSUserDefaults standardUserDefaults] setObject:accountIDURIString forKey:kSettingSelectedAccountID];
 }
 
-- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex
-{
+- (void)actionSheet:(UIActionSheet *)actionSheet clickedButtonAtIndex:(NSInteger)buttonIndex {
 	if (buttonIndex != actionSheet.cancelButtonIndex) {
-		NSFetchRequest *accountsFetchRequest = [[[NSFetchRequest alloc] init] autorelease];
+		NSFetchRequest *accountsFetchRequest = [[NSFetchRequest alloc] init];
 		[accountsFetchRequest setEntity:[NSEntityDescription entityForName:@"Account" inManagedObjectContext:self.managedObjectContext]];
-		[accountsFetchRequest setSortDescriptors:[NSArray arrayWithObjects:[[[NSSortDescriptor alloc] initWithKey:@"title" ascending:YES] autorelease], [[[NSSortDescriptor alloc] initWithKey:@"username" ascending:YES] autorelease], nil]];
-		NSArray *accounts = [self.managedObjectContext executeFetchRequest:accountsFetchRequest error:NULL];
-		ASAccount *account = [accounts objectAtIndex:buttonIndex];
+		[accountsFetchRequest setSortDescriptors:@[[[NSSortDescriptor alloc] initWithKey:@"title" ascending:YES], [[NSSortDescriptor alloc] initWithKey:@"username" ascending:YES]]];
+		NSArray *accounts = [self.managedObjectContext executeFetchRequest:accountsFetchRequest error:nil];
+		ASAccount *account = accounts[buttonIndex];
 		[self loadAccount:account];
 	}
 }
 
-- (void)loadAccount:(ASAccount *)account
-{
-	UIBarButtonItem *selectAccountButtonItem = [[[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Account", nil) style:UIBarButtonItemStyleBordered target:self action:@selector(selectAccount:)] autorelease];
+- (void)loadAccount:(ASAccount *)account {
+	UIBarButtonItem *selectAccountButtonItem1 = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Account", nil) style:UIBarButtonItemStylePlain target:self action:@selector(selectAccount:)];
+	UIBarButtonItem *selectAccountButtonItem2 = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Account", nil) style:UIBarButtonItemStylePlain target:self action:@selector(selectAccount:)];
+	UIBarButtonItem *selectAccountButtonItem3 = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Account", nil) style:UIBarButtonItemStylePlain target:self action:@selector(selectAccount:)];
+	UIBarButtonItem *selectAccountButtonItem4 = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Account", nil) style:UIBarButtonItemStylePlain target:self action:@selector(selectAccount:)];
 	
-	SalesViewController *salesVC = [[[SalesViewController alloc] initWithAccount:account] autorelease];
-	salesVC.navigationItem.leftBarButtonItem = selectAccountButtonItem;
-	UINavigationController *salesNavController = [[[UINavigationController alloc] initWithRootViewController:salesVC] autorelease];
-	salesNavController.navigationBar.translucent = NO;
+	SalesViewController *salesVC = [[SalesViewController alloc] initWithAccount:account];
+	salesVC.navigationItem.leftBarButtonItem = selectAccountButtonItem1;
+	UINavigationController *salesNavController = [[UINavigationController alloc] initWithRootViewController:salesVC];
 	
-	self.window.rootViewController = salesNavController;
+	ReviewsViewController *reviewsVC = [[ReviewsViewController alloc] initWithAccount:account];
+	reviewsVC.navigationItem.leftBarButtonItem = selectAccountButtonItem2;
+	UINavigationController *reviewsNavController = [[UINavigationController alloc] initWithRootViewController:reviewsVC];
+	
+	PaymentsViewController *paymentsVC = [[PaymentsViewController alloc] initWithAccount:account];
+	paymentsVC.navigationItem.leftBarButtonItem = selectAccountButtonItem3;
+	UINavigationController *paymentsNavController = [[UINavigationController alloc] initWithRootViewController:paymentsVC];
+	
+	PromoCodesViewController *promoVC = [[PromoCodesViewController alloc] initWithAccount:account];
+	promoVC.navigationItem.leftBarButtonItem = selectAccountButtonItem4;
+	UINavigationController *promoNavController = [[UINavigationController alloc] initWithRootViewController:promoVC];
+	promoNavController.toolbarHidden = NO;
+	promoNavController.toolbar.barStyle = UIBarStyleBlackOpaque;
+	
+	UITabBarController *tabController = [[UITabBarController alloc] init];
+	[tabController setViewControllers:@[salesNavController, reviewsNavController, paymentsNavController, promoNavController]];
+	
+	self.window.rootViewController = tabController;
 }
 
-- (BOOL)application:(UIApplication *)application handleOpenURL:(NSURL *)url
-{
+- (BOOL)application:(UIApplication *)application handleOpenURL:(NSURL *)url {
 	[self.accountsViewController performSelector:@selector(downloadReports:) withObject:nil afterDelay:0.0];
 	return YES;
 }
 
-- (BOOL)migrateDataIfNeeded
-{
+- (BOOL)migrateDataIfNeeded {
 	NSString *documentsDirectory = [self applicationDocumentsDirectory];
 	NSString *legacyReportDirectory = [documentsDirectory stringByAppendingPathComponent:@"OriginalReports"];
 	NSFileManager *fm = [NSFileManager defaultManager];
@@ -154,30 +180,30 @@
 	if (!originalReportsDirectoryFound) {
 		return NO;
 	}	
-	NSArray *originalReportFiles = [fm contentsOfDirectoryAtPath:legacyReportDirectory error:NULL];
+	NSArray *originalReportFiles = [fm contentsOfDirectoryAtPath:legacyReportDirectory error:nil];
 	if ([originalReportFiles count] == 0) {
 		//All files have been migrated, delete all the clutter in the documents directory:
-		NSArray *files = [fm contentsOfDirectoryAtPath:documentsDirectory error:NULL];
+		NSArray *files = [fm contentsOfDirectoryAtPath:documentsDirectory error:nil];
 		for (NSString *file in files) {
 			NSString *fullPath = [documentsDirectory stringByAppendingPathComponent:file];
-			[fm removeItemAtPath:fullPath error:NULL];
+			[fm removeItemAtPath:fullPath error:nil];
 		}
 		return NO;
 	}
 	NSString *oldUsername = [[NSUserDefaults standardUserDefaults] stringForKey:@"iTunesConnectUsername"];
 	NSString *oldPassword = nil;
 	if (oldUsername) {
-		oldPassword = [SSKeychain passwordForService:@"omz:software AppSales Mobile Service" account:oldUsername];
+		oldPassword = [SAMKeychain passwordForService:@"omz:software AppSales Mobile Service" account:oldUsername];
 	}
 	ASAccount *account = nil;
 	if (oldUsername) {
-		NSFetchRequest *accountFetchRequest = [[[NSFetchRequest alloc] init] autorelease];
+		NSFetchRequest *accountFetchRequest = [[NSFetchRequest alloc] init];
 		[accountFetchRequest setEntity:[NSEntityDescription entityForName:@"Account" inManagedObjectContext:[self managedObjectContext]]];
 		[accountFetchRequest setPredicate:[NSPredicate predicateWithFormat:@"username == %@", oldUsername]];
 		[accountFetchRequest setFetchLimit:1];
-		NSArray *matchingAccounts = [[self managedObjectContext] executeFetchRequest:accountFetchRequest error:NULL];
+		NSArray *matchingAccounts = [[self managedObjectContext] executeFetchRequest:accountFetchRequest error:nil];
 		if ([matchingAccounts count] > 0) {
-			account = [matchingAccounts objectAtIndex:0];
+			account = matchingAccounts[0];
 		}
 	}
 	if (!account) {
@@ -188,44 +214,48 @@
 	[self saveContext];
 	[[ReportDownloadCoordinator sharedReportDownloadCoordinator] importReportsIntoAccount:account fromDirectory:legacyReportDirectory deleteAfterImport:YES];
 	
-	[[[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Update Notice", nil) 
+	[[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Update Notice", nil) 
 								 message:NSLocalizedString(@"You have updated from an older version of AppSales. Your sales reports are currently being imported. You can start using the app while the import is running.", nil)
 								delegate:nil 
 					   cancelButtonTitle:NSLocalizedString(@"OK", nil) 
-					   otherButtonTitles:nil] autorelease] show];
+					   otherButtonTitles:nil] show];
 	return YES;
 }
 
-- (void)applicationDidEnterBackground:(UIApplication *)application
-{
+- (void)applicationDidEnterBackground:(UIApplication *)application {
 	[self saveContext];
+	[self showPasscodeLockIfNeededWithTouchID:NO];
 }
 
-- (void)applicationWillEnterForeground:(UIApplication *)application
-{
+- (void)applicationWillEnterForeground:(UIApplication *)application {
 	[[CurrencyManager sharedManager] refreshIfNeeded];
+	[self showPasscodeLockIfNeededWithTouchID:YES];
 }
 
-- (void)applicationDidBecomeActive:(UIApplication *)application
-{
+- (void)applicationDidBecomeActive:(UIApplication *)application {
 	[[UIApplication sharedApplication] setApplicationIconBadgeNumber:0];
 }
 
-- (void)applicationWillResignActive:(UIApplication *)application
-{
-	[self showPasscodeLockIfNeeded];
-}
-
-- (void)showPasscodeLockIfNeeded
-{
+- (void)showPasscodeLockIfNeededWithTouchID:(BOOL)useTouchID {
 	if ([[KKPasscodeLock sharedLock] isPasscodeRequired]) {
+		if (passcodeVC) {
+			if (useTouchID) {
+				[passcodeVC authenticateWithTouchID];
+			}
+			return;
+		}
 		
-		KKPasscodeViewController *vc = [[[KKPasscodeViewController alloc] initWithNibName:nil bundle:nil] autorelease];
-		vc.mode = KKPasscodeModeEnter;
-		vc.delegate = self;
+		if (self.accountsPopover.popoverVisible) {
+			[self.accountsPopover dismissPopoverAnimated:NO];
+		}
 		
-		UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:vc];
-		if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
+		passcodeVC = [[KKPasscodeViewController alloc] init];
+		passcodeVC.mode = KKPasscodeModeEnter;
+		passcodeVC.startTouchID = useTouchID;
+		passcodeVC.delegate = self;
+		
+		UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:passcodeVC];
+		if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad) {
 			nav.modalPresentationStyle = UIModalPresentationFullScreen;
 			nav.navigationBar.barStyle = UIBarStyleBlack;
 			nav.navigationBar.opaque = NO;
@@ -233,51 +263,46 @@
 			nav.navigationBar.tintColor = accountsViewController.navigationController.navigationBar.tintColor;
 			nav.navigationBar.translucent = accountsViewController.navigationController.navigationBar.translucent;
 			nav.navigationBar.opaque = accountsViewController.navigationController.navigationBar.opaque;
-			nav.navigationBar.barStyle = accountsViewController.navigationController.navigationBar.barStyle;    
+			nav.navigationBar.barStyle = accountsViewController.navigationController.navigationBar.barStyle;
 		}
-		UIViewController *viewControllerForPresentingPasscode = nil;
-		if (self.window.rootViewController.presentedViewController) {
-			if ([self.window.rootViewController.presentedViewController isKindOfClass:[UINavigationController class]]
-				&& [[[(UINavigationController *)self.window.rootViewController.presentedViewController viewControllers] objectAtIndex:0] isKindOfClass:[KKPasscodeViewController class]]) {
-				//The passcode dialog is already shown...
-				return;
-			}
-			//We're in the settings or add account dialog...
-			viewControllerForPresentingPasscode = self.window.rootViewController.presentedViewController;
-		} else {
-			viewControllerForPresentingPasscode = self.window.rootViewController;
-		}
-		if (self.accountsPopover.popoverVisible) {
-			[self.accountsPopover dismissPopoverAnimated:NO];
-		}
+		
 		[[NSNotificationCenter defaultCenter] postNotificationName:ASWillShowPasscodeLockNotification object:self];
-		[viewControllerForPresentingPasscode presentViewController:nav animated:NO completion:nil];
+		
+		[self.window.rootViewController.presentedViewController ?: self.window.rootViewController presentViewController:nav animated:NO completion:nil];
 	}
 }
 
-- (void)applicationWillTerminate:(UIApplication *)application
-{
+- (void)didPasscodeEnteredCorrectly:(KKPasscodeViewController *)viewController {
+	passcodeVC = nil;
+}
+
+- (void)applicationWillTerminate:(UIApplication *)application {
 	[self saveContext];
+}
+
+- (void)promoCodeLicenseAgreementLoaded:(NSNotification *)notification {
+	NSString *licenseAgreement = notification.userInfo[@"licenseAgreement"];
+	PromoCodesLicenseViewController *vc = [[PromoCodesLicenseViewController alloc] initWithLicenseAgreement:licenseAgreement operation:[notification object]];
+	UINavigationController *navController = [[UINavigationController alloc] initWithRootViewController:vc];
+	[self.window.rootViewController presentViewController:navController animated:YES completion:nil];
 }
 
 #pragma mark - Core Data
 
-- (void)saveContext
-{
-	[self.persistentStoreCoordinator lock];
-	NSError *error = nil;
-	NSManagedObjectContext *moc = self.managedObjectContext;
-	if ([moc hasChanges] && ![moc save:&error]) {
-		NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
-		abort();
-	}
-	[self.persistentStoreCoordinator unlock];
+- (void)saveContext {
+	[self.persistentStoreCoordinator performBlockAndWait:^{
+		NSError *error = nil;
+		NSManagedObjectContext *moc = self.managedObjectContext;
+		if ([moc hasChanges] && ![moc save:&error]) {
+			NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
+			abort();
+		}
+	}];
 }
 
 #pragma mark - Core Data stack
 
-- (NSManagedObjectContext *)managedObjectContext
-{
+- (NSManagedObjectContext *)managedObjectContext {
 	if (managedObjectContext != nil) {
 		return managedObjectContext;
 	}
@@ -291,40 +316,35 @@
 	return managedObjectContext;
 }
 
-- (void)mergeChanges:(NSNotification *)notification
-{
+- (void)mergeChanges:(NSNotification *)notification {
 	NSManagedObjectContext *moc = [notification object];
-	dispatch_async(dispatch_get_main_queue(), ^ {
+	dispatch_async(dispatch_get_main_queue(), ^{
 		if (moc != self.managedObjectContext && moc.persistentStoreCoordinator == self.persistentStoreCoordinator) {
 			[self.managedObjectContext mergeChangesFromContextDidSaveNotification:notification];
 		};
 	});
 }
 
-- (NSManagedObjectModel *)managedObjectModel
-{
-    if (managedObjectModel != nil)
-    {
+- (NSManagedObjectModel *)managedObjectModel {
+	if (managedObjectModel != nil) {
 		return managedObjectModel;
-    }
-    NSURL *modelURL = [[NSBundle mainBundle] URLForResource:@"AppSales" withExtension:@"momd"];
+	}
+	NSURL *modelURL = [[NSBundle mainBundle] URLForResource:@"AppSales" withExtension:@"momd"];
 	managedObjectModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:modelURL];
 	return managedObjectModel;
 }
 
 
-- (NSPersistentStoreCoordinator *)persistentStoreCoordinator
-{
-    if (persistentStoreCoordinator != nil) {
-        return persistentStoreCoordinator;
-    }	
+- (NSPersistentStoreCoordinator *)persistentStoreCoordinator {
+	if (persistentStoreCoordinator != nil) {
+		return persistentStoreCoordinator;
+	}	
 	NSURL *storeURL = [[self applicationSupportDirectory] URLByAppendingPathComponent:@"AppSales.sqlite"];
-    
+	
 	NSError *error = nil;
 	persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:[self managedObjectModel]];
-	NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:
-							 [NSNumber numberWithBool:YES], NSMigratePersistentStoresAutomaticallyOption, 
-							 [NSNumber numberWithBool:YES], NSInferMappingModelAutomaticallyOption, nil];
+	NSDictionary *options = @{NSMigratePersistentStoresAutomaticallyOption: @(YES),
+							  NSInferMappingModelAutomaticallyOption: @(YES)};
 	if (![persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:storeURL options:options error:&error]) {
 		NSLog(@"Unresolved error %@, %@", error, [error userInfo]);
 		abort();
@@ -333,38 +353,28 @@
 }
 
 
-- (NSString *)applicationDocumentsDirectory
-{
+- (NSString *)applicationDocumentsDirectory {
 	return [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) lastObject];
 }
 
-- (NSURL *)applicationSupportDirectory
-{
+- (NSURL *)applicationSupportDirectory {
 	NSURL *appSupportDirectory = [[[NSFileManager defaultManager] URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask] lastObject];
-	[[NSFileManager defaultManager] createDirectoryAtPath:[appSupportDirectory path] withIntermediateDirectories:YES attributes:nil error:NULL];
+	[[NSFileManager defaultManager] createDirectoryAtPath:[appSupportDirectory path] withIntermediateDirectories:YES attributes:nil error:nil];
 	return appSupportDirectory;
 }
 
-- (void)reportDownloadFailed:(NSNotification *)notification
-{
-	NSString *errorMessage = [[notification userInfo] objectForKey:kASReportDownloadErrorDescription];
-	NSString *alertMessage = [NSString stringWithFormat:NSLocalizedString(@"Downloading reports from iTunes Connect failed. Please try again later or check the iTunes Connect website for anything unusual. %@", nil), (errorMessage) ? errorMessage : @""];
-	[[[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Error", nil) 
+- (void)promoCodeDownloadFailed:(NSNotification *)notification {
+	NSString *errorDescription = notification.userInfo[kASPromoCodeDownloadFailedErrorDescription];
+	NSString *alertMessage = [NSString stringWithFormat:@"An error occured while downloading the promo codes (%@).", errorDescription];
+	[[[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Error", nil) 
 								 message:alertMessage 
 								delegate:nil 
 					   cancelButtonTitle:NSLocalizedString(@"OK", nil) 
-					   otherButtonTitles:nil] autorelease] show];
+					   otherButtonTitles:nil] show];
 }
 
-- (void)dealloc
-{
+- (void)dealloc {
 	[[NSNotificationCenter defaultCenter] removeObserver:self];
-	[accountsPopover release];
-	[window release];
-	[managedObjectContext release];
-	[managedObjectModel release];
-	[persistentStoreCoordinator release];
-	[super dealloc];
 }
 
 
