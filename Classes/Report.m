@@ -549,17 +549,29 @@
 							@"IAC",	 //In-App Free Subscription
 							@"IAC. "	//In-App Free Subscription
 							@"1.GP",	//GP = Gift Purchase
+							@"1-B.GP",
+							@"1E.GP",
+							@"1EP.GP",
+							@"1EU.GP",
 							@"1F.GP",
 							@"1T.GP",
 							@"F1.GP",
+							@"FI1.GP",
 							@"IA1.GP",
 							@"IA9.GP",
+							@"IAY.GP",
 							@"1.EDU",	//EDU = Education Store transaction
+							@"1-B.EDU",
+							@"1E.EDU",
+							@"1EP.EDU",
+							@"1EU.EDU",
 							@"1F.EDU",
 							@"1T.EDU",
 							@"F1.EDU",
+							@"FI1.EDU",
 							@"IA1.EDU",
 							@"IA9.EDU",
+							@"IAY.EDU",
 							nil];
 	}
 	return combinedPaidTransactionTypes;
